@@ -1,0 +1,209 @@
+﻿@{
+    ViewData["Title"] = "Ahorcado";
+}
+
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - FerranMotaAhorcadoCoreMVC</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <style>
+        .keyboard-row {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 5px;
+        }
+
+        .key {
+            width: 40px;
+            height: 40px;
+            margin: 2px;
+            font-size: 18px;
+            text-transform: uppercase;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f0f0f0;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+            .key:disabled {
+                background-color: #ccc;
+                cursor: not-allowed;
+            }
+
+        .result-message {
+            display: none;
+            font-size: 4rem;
+            font-weight: bold;
+            color: #333;
+            opacity: 0;
+            transition: transform 0.6s ease, opacity 0.6s ease;
+            transform: scale(0.5);
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+            .result-message.show {
+                display: block;
+                opacity: 1;
+                transform: scale(1);
+            }
+
+        #restart-button {
+            display: none;
+            margin: 20px auto;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        #game-result {
+            margin-top: 10px;
+            font-size: 1.25rem;
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <main role="main" class="pb-3">
+            <div class="text-center">
+                <h1 class="display-4">Juego del Ahorcado</h1>
+                <p>¡Adivina la palabra!</p>
+
+                <div id="hangman-game" class="mt-4">
+                    <img id="hangman-image" src="~/img/Ahorcado0.jpg" alt="Hangman" class="mb-3" />
+                    <p>Palabra: <span id="word-display">_ _ _ _ _</span></p>
+                    <p>Intentos incorrectos: <span id="wrong-guesses"></span></p>
+                    <p>Intentos restantes: <span id="remaining-attempts">6</span></p>
+
+                    <div id="result-message" class="result-message"></div>
+
+                    <div id="keyboard-container">
+                        <div id="keyboard" class="mb-3"></div>
+                        <button id="restart-button" class="btn btn-secondary mt-2">Reiniciar Juego</button>
+                    </div>
+
+                </div>
+
+                <p id="game-result" class="mt-3"></p>
+            </div>
+        </main>
+    </div>
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const words = [
+            "algoritmo", "compilador", "depuracion", "variable", "funcion",
+            "bucle", "array", "clase", "objeto", "herencia",
+            "interfaz", "excepcion", "framework", "modulo", "sintaxis",
+            "pseudocodigo", "optimización", "recursividad", "servidor", "cliente"
+        ];
+        const letters = "qwertyuiopasdfghjklzxcvbnm".split('');
+        let wordToGuess = words[Math.floor(Math.random() * words.length)];
+        let guessedWord = Array(wordToGuess.length).fill("_");
+        let wrongGuesses = [];
+        let attemptsLeft = 6;
+        const maxAttempts = 6;
+
+        function updateDisplay() {
+            document.getElementById("word-display").textContent = guessedWord.join(" ");
+            document.getElementById("wrong-guesses").textContent = wrongGuesses.join(", ");
+            document.getElementById("remaining-attempts").textContent = attemptsLeft;
+            document.getElementById("hangman-image").src = `/img/Ahorcado${maxAttempts - attemptsLeft}.jpg`;
+        }
+
+        function resetGame() {
+            wordToGuess = words[Math.floor(Math.random() * words.length)];
+            guessedWord = Array(wordToGuess.length).fill("_");
+            wrongGuesses = [];
+            attemptsLeft = maxAttempts;
+            updateDisplay();
+            document.getElementById("restart-button").style.display = "none";
+            document.getElementById("game-result").textContent = "";
+            document.querySelectorAll(".key").forEach(button => {
+                button.disabled = false;
+            });
+            document.getElementById("keyboard").classList.remove("hidden");
+            document.getElementById("result-message").classList.remove("show");
+        }
+
+        function disableKeyboard() {
+            document.querySelectorAll(".key").forEach(button => {
+                button.disabled = true;
+            });
+        }
+
+        function handleGuess(guess) {
+            if (guess && !wrongGuesses.includes(guess) && !guessedWord.includes(guess)) {
+                if (wordToGuess.includes(guess)) {
+                    for (let i = 0; i < wordToGuess.length; i++) {
+                        if (wordToGuess[i] === guess) {
+                            guessedWord[i] = guess;
+                        }
+                    }
+                } else {
+                    wrongGuesses.push(guess);
+                    attemptsLeft--;
+                }
+
+                if (!guessedWord.includes("_")) {
+                    document.getElementById("restart-button").style.display = "block";
+                    disableKeyboard();
+                    showResultMessage("¡Ganaste!");
+                    document.getElementById("game-result").textContent = "";
+                } else if (attemptsLeft <= 0) {
+                    document.getElementById("restart-button").style.display = "block";
+                    disableKeyboard();
+                    showResultMessage("¡Perdiste!");
+                    document.getElementById("game-result").textContent = "La palabra secreta era: " + wordToGuess;
+                }
+            }
+            updateDisplay();
+        }
+
+        function createKeyboard() {
+            const keyboard = document.getElementById("keyboard");
+            const rows = ["qwertyuiop", "asdfghjkl", "zxcvbnm"];
+
+            rows.forEach(row => {
+                const rowDiv = document.createElement("div");
+                rowDiv.classList.add("keyboard-row");
+                row.split("").forEach(letter => {
+                    const button = document.createElement("button");
+                    button.classList.add("key");
+                    button.textContent = letter.toUpperCase();
+                    button.dataset.letter = letter;
+                    button.addEventListener("click", function () {
+                        handleGuess(letter);
+                        button.disabled = true;
+                    });
+                    rowDiv.appendChild(button);
+                });
+                keyboard.appendChild(rowDiv);
+            });
+        }
+
+        function showResultMessage(message) {
+            const resultMessage = document.getElementById("result-message");
+            resultMessage.textContent = message;
+            resultMessage.classList.add("show");
+            document.getElementById("keyboard").classList.add("hidden");
+        }
+
+        document.getElementById("restart-button").addEventListener("click", function () {
+            resetGame();
+        });
+
+        createKeyboard();
+        updateDisplay();
+    </script>
+</body>
+
+</html>
